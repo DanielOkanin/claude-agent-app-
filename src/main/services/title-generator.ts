@@ -1,0 +1,23 @@
+import { execSync } from 'child_process'
+
+export async function generateTitle(userMessage: string, dirName: string): Promise<string> {
+  const prompt = `Generate a short title (3-6 words, no quotes) summarizing this chat message. Just output the title, nothing else.\n\nMessage: ${userMessage}`
+
+  try {
+    const result = execSync(
+      `echo ${JSON.stringify(prompt)} | claude --model claude-haiku-4-5-20251001 --output-format text -p`,
+      { encoding: 'utf-8', timeout: 10000 }
+    ).trim()
+
+    if (result && result.length > 0 && result.length < 80) {
+      return `${dirName} — ${result}`
+    }
+  } catch {
+    // Fall back to raw message
+  }
+
+  // Fallback: use first line of message
+  const firstLine = userMessage.split('\n')[0]
+  const title = firstLine.length > 60 ? firstLine.slice(0, 57) + '...' : firstLine
+  return `${dirName} — ${title}`
+}

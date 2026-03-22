@@ -1,5 +1,6 @@
 import * as pty from 'node-pty'
 import { homedir } from 'os'
+import { generateTitle } from './title-generator'
 
 interface TerminalSession {
   id: string
@@ -82,14 +83,19 @@ export class TerminalService {
         const message = session.inputBuffer.trim()
         if (message.length >= 5) {
           session.titled = true
-          // Use first line, truncated to ~60 chars
-          const firstLine = message.split('\n')[0]
-          const title = firstLine.length > 60 ? firstLine.slice(0, 57) + '...' : firstLine
           const dirName = session.workingDirectory.split('/').pop() || ''
-          const fullTitle = `${dirName} — ${title}`
+          // Set a quick fallback title immediately, then replace with AI-generated one
+          const firstLine = message.split('\n')[0]
+          const fallback = firstLine.length > 60 ? firstLine.slice(0, 57) + '...' : firstLine
           if (this.onTitleUpdate) {
-            this.onTitleUpdate(id, fullTitle)
+            this.onTitleUpdate(id, `${dirName} — ${fallback}`)
           }
+          // Generate a better title asynchronously
+          generateTitle(message, dirName).then((title) => {
+            if (this.onTitleUpdate) {
+              this.onTitleUpdate(id, title)
+            }
+          })
         }
         session.inputBuffer = ''
       } else if (data === '\x7f' || data === '\b') {
