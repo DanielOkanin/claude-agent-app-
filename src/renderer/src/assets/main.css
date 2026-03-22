@@ -1,0 +1,46 @@
+@import 'tailwindcss';
+
+html, body, #root {
+  @apply h-full w-full overflow-hidden;
+}
+
+body {
+  @apply font-sans antialiased;
+}
+
+/* Custom scrollbar for sidebar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* xterm container */
+.xterm {
+  padding: 8px;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+/* Typing indicator - bouncing dots */
+.typing-dot {
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+  30% { opacity: 1; transform: scale(1.2); }
+}

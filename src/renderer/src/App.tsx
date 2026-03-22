@@ -1,0 +1,321 @@
+import { useEffect, useState, useRef } from 'react'
+import { Sidebar } from './components/Sidebar'
+import { TerminalView, setupTerminalDataHandler, exportTerminalContent } from './components/Terminal'
+import { ChangedFilesPanel } from './components/ChangedFiles'
+import { CommandPalette } from './components/CommandPalette'
+import { DiffWindow } from './components/DiffWindow'
+import { useTerminalStore, AVAILABLE_MODELS } from './stores/chatStore'
+
+// If loaded with #/diff hash, render the diff window instead
+if (window.location.hash === '#/diff') {
+  // Will be handled by the isDiffWindow check below
+}
+
+
+function getModelColor(modelId: string): string {
+  if (modelId.includes('opus')) return 'text-purple-400 bg-purple-400/15 border-purple-400/30'
+  if (modelId.includes('haiku')) return 'text-green-400 bg-green-400/15 border-green-400/30'
+  return 'text-blue-400 bg-blue-400/15 border-blue-400/30'
+}
+
+function getModelShortName(modelId: string): string {
+  if (modelId.includes('opus')) return 'Opus'
+  if (modelId.includes('haiku')) return 'Haiku'
+  return 'Sonnet'
+}
+
+function ActiveModelSwitcher() {
+  const { activeTerminalId, terminals } = useTerminalStore()
+  const [open, setOpen] = useState(false)
+
+  const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
+  if (!activeTerminal) return null
+
+  const switchModel = (modelId: string) => {
+    window.api.writeTerminal(activeTerminal.id, `/model ${modelId}\r`)
+    useTerminalStore.getState().updateModel(activeTerminal.id, modelId)
+    setOpen(false)
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border transition-colors ${getModelColor(activeTerminal.model)}`}
+      >
+        {getModelShortName(activeTerminal.model)}
+        <svg className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 bg-slate-800 border border-slate-700/50 rounded-lg overflow-hidden z-50 shadow-xl w-48">
+            <div className="px-3 py-1.5 text-[10px] text-slate-500 uppercase tracking-wider border-b border-slate-700/30">
+              Switch model
+            </div>
+            {AVAILABLE_MODELS.map((model) => (
+              <button
+                key={model.id}
+                onClick={() => switchModel(model.id)}
+                className={`w-full px-3 py-2 text-left hover:bg-slate-700 transition-colors flex items-center justify-between ${
+                  activeTerminal.model === model.id ? 'bg-slate-700/50' : ''
+                }`}
+              >
+                <div>
+                  <div className="text-xs text-white font-medium">{model.label}</div>
+                  <div className="text-[10px] text-slate-500">{model.description}</div>
+                </div>
+                {activeTerminal.model === model.id && (
+                  <svg className="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function ExportButton() {
+  const { activeTerminalId } = useTerminalStore()
+  const [copied, setCopied] = useState(false)
+
+  if (!activeTerminalId) return null
+
+  const handleExport = async () => {
+    const content = exportTerminalContent(activeTerminalId)
+    if (content) {
+      await navigator.clipboard.writeText(content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleExport}
+      className="w-7 h-7 rounded flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors"
+      title="Export chat to clipboard"
+    >
+      {copied ? (
+        <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5A3.375 3.375 0 006.375 7.5H6m9 8.25H6.375c-.621 0-1.125-.504-1.125-1.125V4.125c0-.621.504-1.125 1.125-1.125h4.672M12 18.75h6.375c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9H3.375c-.621 0-1.125.504-1.125 1.125v6" />
+        </svg>
+      )}
+    </button>
+  )
+}
+
+function TerminalArea({ showFiles, onToggleFiles }: { showFiles: boolean; onToggleFiles: () => void }) {
+  const { terminals, activeTerminalId, createTerminal } = useTerminalStore()
+
+  if (terminals.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[#0f172a]">
+        <div className="text-center max-w-sm">
+          <div className="w-16 h-16 rounded-2xl bg-slate-800/50 flex items-center justify-center mx-auto mb-5">
+            <svg className="w-8 h-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z" />
+            </svg>
+          </div>
+          <h2 className="text-base font-semibold text-slate-400 mb-2">Start a new chat</h2>
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Each chat runs Claude in your project directory with full capabilities.
+          </p>
+          <button
+            onClick={createTerminal}
+            className="mt-5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
+          >
+            New Chat
+          </button>
+          <div className="mt-4 flex items-center justify-center gap-4">
+            <div className="flex items-center gap-1">
+              <kbd className="text-[10px] text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded">⌘N</kbd>
+              <span className="text-[10px] text-slate-600">New Chat</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <kbd className="text-[10px] text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded">⌘K</kbd>
+              <span className="text-[10px] text-slate-600">Commands</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex-1 flex flex-col min-w-0 bg-[#0f172a]">
+      {/* Top bar */}
+      <div className="flex items-center justify-end border-b border-slate-800 bg-[#0d1526] shrink-0 pt-7" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+        <div className="flex items-center gap-1 px-3 py-2 shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <ActiveModelSwitcher />
+          <button
+            onClick={onToggleFiles}
+            className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+              showFiles ? 'bg-blue-500/20 text-blue-400' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
+            }`}
+            title="Toggle changed files panel"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Terminal views */}
+      <div className="flex-1 relative">
+        {terminals.map((t) => (
+          <div
+            key={t.id}
+            className="absolute inset-0"
+            style={{ display: activeTerminalId === t.id ? 'block' : 'none' }}
+          >
+            <TerminalView
+              terminalId={t.id}
+              isActive={activeTerminalId === t.id}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ResizableFilesPanel({ showFiles, onToggleFiles }: { showFiles: boolean; onToggleFiles: () => void }) {
+  const { filesPanelWidth, setFilesPanelWidth } = useTerminalStore()
+  const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null)
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizeRef.current) return
+      const delta = resizeRef.current.startX - e.clientX
+      setFilesPanelWidth(resizeRef.current.startWidth + delta)
+    }
+    const handleMouseUp = () => {
+      resizeRef.current = null
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [setFilesPanelWidth])
+
+  if (!showFiles) {
+    return <ChangedFilesPanel isOpen={false} onToggle={onToggleFiles} />
+  }
+
+  return (
+    <div className="relative shrink-0 flex" style={{ width: filesPanelWidth }}>
+      {/* Resize handle */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500/50 transition-colors z-10"
+        onMouseDown={(e) => {
+          resizeRef.current = { startX: e.clientX, startWidth: filesPanelWidth }
+          document.body.style.cursor = 'col-resize'
+          document.body.style.userSelect = 'none'
+        }}
+      />
+      <div className="flex-1">
+        <ChangedFilesPanel isOpen={true} onToggle={onToggleFiles} />
+      </div>
+    </div>
+  )
+}
+
+function App() {
+  const {
+    loadTerminals, createTerminal, deleteTerminal, markDisconnected,
+    updateTitle, activeTerminalId, terminals, setShowCommandPalette, switchToIndex
+  } = useTerminalStore()
+  const [showFiles, setShowFiles] = useState(false)
+
+  useEffect(() => {
+    loadTerminals()
+
+    const unsubData = setupTerminalDataHandler()
+
+    const unsubExit = window.api.onTerminalExit((id) => {
+      markDisconnected(id)
+    })
+
+    const unsubTitle = window.api.onTerminalTitleUpdated((id, title) => {
+      updateTitle(id, title)
+    })
+
+    const unsubShortcut = window.api.onNewTerminalShortcut(createTerminal)
+
+    // Cmd+W — close active chat
+    const unsubClose = window.api.onCloseTerminalShortcut(() => {
+      const { activeTerminalId } = useTerminalStore.getState()
+      if (activeTerminalId) {
+        deleteTerminal(activeTerminalId)
+      }
+    })
+
+    // Cmd+K — command palette
+    const unsubPalette = window.api.onCommandPaletteShortcut(() => {
+      const { showCommandPalette } = useTerminalStore.getState()
+      setShowCommandPalette(!showCommandPalette)
+    })
+
+    // Cmd+1-9 — switch chats
+    const unsubSwitch = window.api.onSwitchChatShortcut((index) => {
+      switchToIndex(index)
+    })
+
+    return () => {
+      unsubData()
+      unsubExit()
+      unsubTitle()
+      unsubShortcut()
+      unsubClose()
+      unsubPalette()
+      unsubSwitch()
+    }
+  }, [])
+
+  // Update window title when active terminal changes
+  useEffect(() => {
+    if (activeTerminalId) {
+      const terminal = terminals.find((t) => t.id === activeTerminalId)
+      if (terminal) {
+        window.api.setWindowTitle(terminal.title)
+      }
+    } else {
+      window.api.setWindowTitle('Claude')
+    }
+  }, [activeTerminalId, terminals])
+
+  return (
+    <div className="flex h-screen bg-slate-900 text-white">
+      <Sidebar />
+      <TerminalArea showFiles={showFiles} onToggleFiles={() => setShowFiles(!showFiles)} />
+      <ResizableFilesPanel showFiles={showFiles} onToggleFiles={() => setShowFiles(!showFiles)} />
+      <CommandPalette />
+    </div>
+  )
+}
+
+function Root() {
+  if (window.location.hash === '#/diff') {
+    return <DiffWindow />
+  }
+  return <App />
+}
+
+export default Root
