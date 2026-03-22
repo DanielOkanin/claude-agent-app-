@@ -14,8 +14,9 @@ A desktop chat application for Claude Code with multi-session terminals, model s
 ## Prerequisites
 
 - Node.js 18+
-- An Anthropic API key (set as `ANTHROPIC_API_KEY` environment variable)
-- Claude Code CLI installed
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated
+
+If `claude` works in your terminal, you're good to go. No extra API keys needed.
 
 ## Setup
 
@@ -23,11 +24,11 @@ A desktop chat application for Claude Code with multi-session terminals, model s
 # Install dependencies
 npm install
 
-# Run in development mode
+# Run in development mode (with hot-reload)
 npm run dev
 ```
 
-## Build
+## Build as Desktop App
 
 ```bash
 # macOS
@@ -39,6 +40,8 @@ npm run build:win
 # Linux
 npm run build:linux
 ```
+
+The packaged app will be in the `dist/` folder. On macOS, drag the `.app` to your Applications folder to use it as a clickable desktop app.
 
 ## Tech Stack
 
