@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { Sidebar } from './components/Sidebar'
-import { TerminalView, setupTerminalDataHandler, exportTerminalContent } from './components/Terminal'
+import { TerminalView, setupTerminalDataHandler } from './components/Terminal'
 import { ChangedFilesPanel } from './components/ChangedFiles'
 import { CommandPalette } from './components/CommandPalette'
 import { DiffWindow } from './components/DiffWindow'
@@ -79,40 +79,6 @@ function ActiveModelSwitcher() {
         </>
       )}
     </div>
-  )
-}
-
-function ExportButton() {
-  const { activeTerminalId } = useTerminalStore()
-  const [copied, setCopied] = useState(false)
-
-  if (!activeTerminalId) return null
-
-  const handleExport = async () => {
-    const content = exportTerminalContent(activeTerminalId)
-    if (content) {
-      await navigator.clipboard.writeText(content)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
-
-  return (
-    <button
-      onClick={handleExport}
-      className="w-7 h-7 rounded flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors"
-      title="Export chat to clipboard"
-    >
-      {copied ? (
-        <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-        </svg>
-      ) : (
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5A3.375 3.375 0 006.375 7.5H6m9 8.25H6.375c-.621 0-1.125-.504-1.125-1.125V4.125c0-.621.504-1.125 1.125-1.125h4.672M12 18.75h6.375c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9H3.375c-.621 0-1.125.504-1.125 1.125v6" />
-        </svg>
-      )}
-    </button>
   )
 }
 

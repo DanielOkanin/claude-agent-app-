@@ -75,7 +75,9 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
     const state = get()
     const unread = new Set(state.unreadTerminals)
     unread.delete(id)
-    set({ activeTerminalId: id, unreadTerminals: unread })
+    const typing = new Set(state.typingTerminals)
+    typing.delete(id)
+    set({ activeTerminalId: id, unreadTerminals: unread, typingTerminals: typing })
     // Update window title
     const terminal = state.terminals.find((t) => t.id === id)
     if (terminal) {
