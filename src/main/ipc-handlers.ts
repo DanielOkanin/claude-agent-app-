@@ -1,7 +1,8 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron'
 import { execSync } from 'child_process'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync, openSync, readSync, fstatSync, closeSync } from 'fs'
 import { join } from 'path'
+import { homedir } from 'os'
 import { is } from '@electron-toolkit/utils'
 import { ChatStore } from './services/chat-store'
 import { TerminalService } from './services/terminal-service'
@@ -263,6 +264,43 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   ipcMain.on('window:set-title', (_event, title: string) => {
     if (!mainWindow.isDestroyed()) {
       mainWindow.setTitle(title)
+    }
+  })
+
+  ipcMain.handle('session:context-usage', (_event, sessionId: string, workingDirectory: string) => {
+    try {
+      const projectKey = workingDirectory.replace(/\//g, '-')
+      const sessionFile = join(homedir(), '.claude', 'projects', projectKey, `${sessionId}.jsonl`)
+
+      // Read only the last ~32KB of the file to find usage data efficiently
+      let tail: string
+      const fd = openSync(sessionFile, 'r')
+      try {
+        const stat = fstatSync(fd)
+        const readSize = Math.min(stat.size, 32768)
+        const buffer = Buffer.alloc(readSize)
+        readSync(fd, buffer, 0, readSize, stat.size - readSize)
+        tail = buffer.toString('utf-8')
+      } finally {
+        closeSync(fd)
+      }
+
+      const lines = tail.trim().split('\n')
+
+      // Find the last message with usage data (read backwards)
+      for (let i = lines.length - 1; i >= 0; i--) {
+        try {
+          const data = JSON.parse(lines[i])
+          const usage = data.message?.usage
+          if (usage) {
+            const contextUsed = (usage.input_tokens || 0) + (usage.cache_creation_input_tokens || 0) + (usage.cache_read_input_tokens || 0)
+            return { contextUsed, outputTokens: usage.output_tokens || 0, model: data.message?.model || null }
+          }
+        } catch { continue }
+      }
+      return null
+    } catch {
+      return null
     }
   })
 

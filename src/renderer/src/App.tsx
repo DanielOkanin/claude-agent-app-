@@ -24,6 +24,57 @@ function getModelShortName(modelId: string): string {
   return 'Sonnet'
 }
 
+function getContextLimit(modelId: string): number {
+  if (modelId.includes('haiku')) return 200000
+  return 1000000
+}
+
+function formatTokens(n: number): string {
+  return n >= 1000000 ? `${(n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1)}M` : `${Math.round(n / 1000)}K`
+}
+
+function ContextUsage() {
+  const { activeTerminalId, terminals } = useTerminalStore()
+  const [usage, setUsage] = useState<{ contextUsed: number; model?: string } | null>(null)
+
+  const activeTerminal = terminals.find((t) => t.id === activeTerminalId)
+
+  useEffect(() => {
+    if (!activeTerminal) return
+    let stale = false
+    setUsage(null)
+
+    const fetchUsage = () => {
+      window.api.getContextUsage(activeTerminal.id, activeTerminal.workingDirectory).then((data) => {
+        if (!stale && data) setUsage(data)
+      }).catch(() => {})
+    }
+
+    fetchUsage()
+    const interval = setInterval(fetchUsage, 5000)
+    return () => { stale = true; clearInterval(interval) }
+  }, [activeTerminal?.id])
+
+  if (!activeTerminal || !usage) return null
+
+  const model = usage.model || activeTerminal.model
+  const limit = getContextLimit(model)
+  const percent = Math.min(100, Math.round((usage.contextUsed / limit) * 100))
+
+  let color = 'bg-blue-500'
+  if (percent > 80) color = 'bg-red-500'
+  else if (percent > 50) color = 'bg-yellow-500'
+
+  return (
+    <div className="flex items-center gap-2 text-[11px] text-slate-500" title={`Context: ${formatTokens(usage.contextUsed)} / ${formatTokens(limit)} tokens (${percent}%)`}>
+      <span>{formatTokens(usage.contextUsed)} / {formatTokens(limit)}</span>
+      <div className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+        <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${percent}%` }} />
+      </div>
+    </div>
+  )
+}
+
 function ActiveModelSwitcher() {
   const { activeTerminalId, terminals } = useTerminalStore()
   const [open, setOpen] = useState(false)
@@ -122,8 +173,14 @@ function TerminalArea({ showFiles, onToggleFiles }: { showFiles: boolean; onTogg
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-[#0f172a]">
       {/* Top bar */}
-      <div className="flex items-center justify-end border-b border-slate-800 bg-[#0d1526] shrink-0 pt-7" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
-        <div className="flex items-center gap-1 px-3 py-2 shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <div className="flex items-center justify-between border-b border-slate-800 bg-[#0d1526] shrink-0 pt-7" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+        <div className="flex-1 min-w-0 px-3 py-2">
+          <h1 className="text-sm font-medium text-slate-300">
+            {terminals.find((t) => t.id === activeTerminalId)?.title || ''}
+          </h1>
+        </div>
+        <div className="flex items-center gap-3 px-3 py-2 shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <ContextUsage />
           <ActiveModelSwitcher />
           <button
             onClick={onToggleFiles}

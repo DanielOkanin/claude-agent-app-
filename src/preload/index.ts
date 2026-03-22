@@ -26,6 +26,8 @@ const api = {
   signalDiffReady: () => ipcRenderer.send('diff:ready'),
   getDiffData: () => ipcRenderer.invoke('diff:get-data'),
   switchDiffFile: (filePath: string) => ipcRenderer.invoke('diff:switch-file', filePath),
+  getContextUsage: (sessionId: string, workingDirectory: string) =>
+    ipcRenderer.invoke('session:context-usage', sessionId, workingDirectory),
   selectDirectory: () => ipcRenderer.invoke('dialog:select-directory'),
   onTerminalData: (callback: (id: string, data: string) => void) => {
     const handler = (_event: any, id: string, data: string) => callback(id, data)

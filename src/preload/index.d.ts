@@ -1,4 +1,4 @@
-import type { TerminalSession } from '../main/types'
+import type { TerminalSession, ContextUsageData } from '../main/types'
 
 interface GitFileChange {
   status: string
@@ -25,6 +25,7 @@ declare global {
       signalDiffReady: () => void
       getDiffData: () => Promise<{ filePath: string; oldContent: string; newContent: string; cwd: string; allFiles: string[] } | null>
       switchDiffFile: (filePath: string) => Promise<{ filePath: string; oldContent: string; newContent: string; cwd: string; allFiles: string[] } | null>
+      getContextUsage: (sessionId: string, workingDirectory: string) => Promise<ContextUsageData | null>
       selectDirectory: () => Promise<string | null>
       onTerminalData: (callback: (id: string, data: string) => void) => () => void
       onTerminalExit: (callback: (id: string) => void) => () => void
