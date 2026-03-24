@@ -47,6 +47,15 @@ app.whenReady().then(() => {
   const mainWindow = createWindow()
   registerIpcHandlers(mainWindow)
 
+  // Grant microphone access for voice input
+  mainWindow.webContents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
+    if (permission === 'media') {
+      callback(true)
+    } else {
+      callback(false)
+    }
+  })
+
   // Cmd+N — new chat
   globalShortcut.register('CommandOrControl+N', () => {
     mainWindow.webContents.send('shortcut:new-chat')

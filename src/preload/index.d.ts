@@ -35,6 +35,12 @@ declare global {
       onCloseTerminalShortcut: (callback: () => void) => () => void
       onCommandPaletteShortcut: (callback: () => void) => () => void
       onSwitchChatShortcut: (callback: (index: number) => void) => () => void
+      voiceStart: () => Promise<boolean>
+      voiceStop: () => Promise<void>
+      voiceCancel: () => Promise<void>
+      onVoicePartial: (callback: (text: string) => void) => () => void
+      onVoiceFinal: (callback: (text: string) => void) => () => void
+      onVoiceError: (callback: (error: string) => void) => () => void
     }
     webUtils: {
       getPathForFile: (file: File) => string

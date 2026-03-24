@@ -1,5 +1,5 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron'
-import { execSync } from 'child_process'
+import { execSync, spawn, ChildProcess } from 'child_process'
 import { readFileSync, openSync, readSync, fstatSync, closeSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
@@ -312,8 +312,62 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     return result.filePaths[0]
   })
 
+  // Voice transcription
+  let transcribeProcess: ChildProcess | null = null
+  const transcribeBinary = join(__dirname, '../../resources/transcribe')
+
+  ipcMain.handle('voice:start', () => {
+    if (transcribeProcess) return false
+
+    transcribeProcess = spawn(transcribeBinary, [], {
+      stdio: ['pipe', 'pipe', 'pipe']
+    })
+
+    transcribeProcess.stdout?.on('data', (data: Buffer) => {
+      const lines = data.toString().split('\n').filter(Boolean)
+      for (const line of lines) {
+        if (line.startsWith('PARTIAL:')) {
+          mainWindow.webContents.send('voice:partial', line.slice(8))
+        } else if (line.startsWith('FINAL:')) {
+          mainWindow.webContents.send('voice:final', line.slice(6))
+          transcribeProcess = null
+        }
+      }
+    })
+
+    transcribeProcess.stderr?.on('data', (data: Buffer) => {
+      const msg = data.toString().trim()
+      if (msg.startsWith('ERROR:')) {
+        mainWindow.webContents.send('voice:error', msg.slice(7))
+      }
+    })
+
+    transcribeProcess.on('exit', () => {
+      transcribeProcess = null
+    })
+
+    return true
+  })
+
+  ipcMain.handle('voice:stop', () => {
+    if (transcribeProcess?.stdin) {
+      transcribeProcess.stdin.write('STOP\n')
+    }
+  })
+
+  ipcMain.handle('voice:cancel', () => {
+    if (transcribeProcess) {
+      transcribeProcess.kill()
+      transcribeProcess = null
+    }
+  })
+
   // Cleanup on app quit
   mainWindow.on('closed', () => {
+    if (transcribeProcess) {
+      transcribeProcess.kill()
+      transcribeProcess = null
+    }
     terminalService.destroyAll()
   })
 }

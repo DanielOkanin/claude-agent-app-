@@ -68,6 +68,24 @@ const api = {
     const handler = (_event: any, index: number) => callback(index)
     ipcRenderer.on('shortcut:switch-chat', handler)
     return () => ipcRenderer.removeListener('shortcut:switch-chat', handler)
+  },
+  voiceStart: () => ipcRenderer.invoke('voice:start'),
+  voiceStop: () => ipcRenderer.invoke('voice:stop'),
+  voiceCancel: () => ipcRenderer.invoke('voice:cancel'),
+  onVoicePartial: (callback: (text: string) => void) => {
+    const handler = (_event: any, text: string) => callback(text)
+    ipcRenderer.on('voice:partial', handler)
+    return () => ipcRenderer.removeListener('voice:partial', handler)
+  },
+  onVoiceFinal: (callback: (text: string) => void) => {
+    const handler = (_event: any, text: string) => callback(text)
+    ipcRenderer.on('voice:final', handler)
+    return () => ipcRenderer.removeListener('voice:final', handler)
+  },
+  onVoiceError: (callback: (error: string) => void) => {
+    const handler = (_event: any, error: string) => callback(error)
+    ipcRenderer.on('voice:error', handler)
+    return () => ipcRenderer.removeListener('voice:error', handler)
   }
 }
 

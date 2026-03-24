@@ -3,6 +3,7 @@ import { Sidebar } from './components/Sidebar'
 import { TerminalView, setupTerminalDataHandler } from './components/Terminal'
 import { ChangedFilesPanel } from './components/ChangedFiles'
 import { CommandPalette } from './components/CommandPalette'
+import { VoiceInput } from './components/VoiceInput'
 import { DiffWindow } from './components/DiffWindow'
 import { useTerminalStore, AVAILABLE_MODELS } from './stores/chatStore'
 
@@ -326,6 +327,7 @@ function App() {
       <TerminalArea showFiles={showFiles} onToggleFiles={() => setShowFiles(!showFiles)} />
       <ResizableFilesPanel showFiles={showFiles} onToggleFiles={() => setShowFiles(!showFiles)} />
       <CommandPalette />
+      <VoiceInput />
     </div>
   )
 }
