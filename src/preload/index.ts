@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
 const api = {
   createTerminal: (workingDirectory: string, model?: string) =>
@@ -72,3 +72,6 @@ const api = {
 }
 
 contextBridge.exposeInMainWorld('api', api)
+contextBridge.exposeInMainWorld('webUtils', {
+  getPathForFile: (file: File) => webUtils.getPathForFile(file)
+})

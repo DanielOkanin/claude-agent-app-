@@ -36,5 +36,8 @@ declare global {
       onCommandPaletteShortcut: (callback: () => void) => () => void
       onSwitchChatShortcut: (callback: (index: number) => void) => () => void
     }
+    webUtils: {
+      getPathForFile: (file: File) => string
+    }
   }
 }

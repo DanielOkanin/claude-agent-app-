@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
@@ -121,12 +121,83 @@ export function TerminalView({ terminalId, isActive }: TerminalProps) {
     }
   }, [isActive, terminalId, getOrCreateTerminal])
 
+  const [isDragOver, setIsDragOver] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  // Listen for drag events on the document to detect files being dragged over the window
+  useEffect(() => {
+    if (!isActive) return
+
+    let enterCount = 0
+
+    const handleDragEnter = (e: DragEvent) => {
+      if (!e.dataTransfer?.types.includes('Files')) return
+      e.preventDefault()
+      enterCount++
+      if (enterCount === 1) setIsDragOver(true)
+    }
+
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault()
+      enterCount--
+      if (enterCount <= 0) {
+        enterCount = 0
+        setIsDragOver(false)
+      }
+    }
+
+    const handleDragOver = (e: DragEvent) => {
+      if (!e.dataTransfer?.types.includes('Files')) return
+      e.preventDefault()
+    }
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      enterCount = 0
+      setIsDragOver(false)
+
+      const files = Array.from(e.dataTransfer?.files ?? [])
+      if (files.length === 0) return
+
+      const paths = files
+        .map((f) => window.webUtils.getPathForFile(f))
+        .filter(Boolean)
+
+      if (paths.length === 0) return
+
+      const text = paths.join(' ')
+      const instance = terminalInstances.get(terminalId)
+      if (instance) {
+        instance.xterm.paste(text)
+      }
+    }
+
+    document.addEventListener('dragenter', handleDragEnter)
+    document.addEventListener('dragleave', handleDragLeave)
+    document.addEventListener('dragover', handleDragOver)
+    document.addEventListener('drop', handleDrop)
+
+    return () => {
+      document.removeEventListener('dragenter', handleDragEnter)
+      document.removeEventListener('dragleave', handleDragLeave)
+      document.removeEventListener('dragover', handleDragOver)
+      document.removeEventListener('drop', handleDrop)
+    }
+  }, [isActive, terminalId])
+
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full"
-      style={{ display: isActive ? 'block' : 'none' }}
-    />
+    <div ref={wrapperRef} className="w-full h-full relative" style={{ display: isActive ? 'block' : 'none' }}>
+      <div
+        ref={containerRef}
+        className="w-full h-full"
+      />
+      {isDragOver && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/80 border-2 border-dashed border-blue-400 rounded-lg">
+          <div className="text-blue-300 text-lg font-medium">Drop files here</div>
+        </div>
+      )}
+    </div>
   )
 }
 
