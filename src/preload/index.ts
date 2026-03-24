@@ -44,6 +44,11 @@ const api = {
     ipcRenderer.on('terminal:title-updated', handler)
     return () => ipcRenderer.removeListener('terminal:title-updated', handler)
   },
+  onSessionIdUpdated: (callback: (id: string, sessionId: string) => void) => {
+    const handler = (_event: any, id: string, sessionId: string) => callback(id, sessionId)
+    ipcRenderer.on('terminal:session-id-updated', handler)
+    return () => ipcRenderer.removeListener('terminal:session-id-updated', handler)
+  },
   onNewTerminalShortcut: (callback: () => void) => {
     const handler = () => callback()
     ipcRenderer.on('shortcut:new-chat', handler)

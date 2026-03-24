@@ -30,6 +30,7 @@ declare global {
       onTerminalData: (callback: (id: string, data: string) => void) => () => void
       onTerminalExit: (callback: (id: string) => void) => () => void
       onTerminalTitleUpdated: (callback: (id: string, title: string) => void) => () => void
+      onSessionIdUpdated: (callback: (id: string, sessionId: string) => void) => () => void
       onNewTerminalShortcut: (callback: () => void) => () => void
       onCloseTerminalShortcut: (callback: () => void) => () => void
       onCommandPaletteShortcut: (callback: () => void) => () => void

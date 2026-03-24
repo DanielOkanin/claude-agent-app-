@@ -1,6 +1,6 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron'
 import { execSync } from 'child_process'
-import { readFileSync, existsSync, openSync, readSync, fstatSync, closeSync } from 'fs'
+import { readFileSync, openSync, readSync, fstatSync, closeSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import { is } from '@electron-toolkit/utils'
@@ -27,6 +27,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       workingDirectory,
       session.model,
       false,
+      session.sessionId,
       (data) => {
         if (!mainWindow.isDestroyed()) {
           mainWindow.webContents.send('terminal:data', session.id, data)
@@ -73,6 +74,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       session.workingDirectory,
       session.model,
       true,
+      session.sessionId,
       (data) => {
         if (!mainWindow.isDestroyed()) {
           mainWindow.webContents.send('terminal:data', id, data)

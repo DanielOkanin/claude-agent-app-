@@ -132,7 +132,33 @@ export function TerminalView({ terminalId, isActive }: TerminalProps) {
 
 // Handle incoming data from the pty — also marks unread for background tabs
 const typingTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+const pendingData = new Map<string, { bytes: number; timer: ReturnType<typeof setTimeout> }>()
+const recentlyDeactivated = new Set<string>()
+
+// Strip ANSI escape sequences and control chars to measure meaningful content
+function meaningfulLength(data: string): number {
+  const stripped = data
+    .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '') // CSI sequences
+    .replace(/\x1b\][^\x07]*\x07/g, '') // OSC sequences
+    .replace(/\x1b[^[\]]/g, '') // Other escape sequences
+    .replace(/[\x00-\x1f]/g, '') // Control characters
+  return stripped.length
+}
+
 export function setupTerminalDataHandler(): () => void {
+  // Track terminal switches — suppress indicators briefly for the terminal we just left
+  let prevActiveId: string | null = null
+  const unsubStore = useTerminalStore.subscribe((state) => {
+    const newActiveId = state.activeTerminalId
+    if (prevActiveId && prevActiveId !== newActiveId) {
+      const deactivatedId = prevActiveId
+      recentlyDeactivated.add(deactivatedId)
+      pendingData.delete(deactivatedId) // Clear any pending accumulation
+      setTimeout(() => recentlyDeactivated.delete(deactivatedId), 500)
+    }
+    prevActiveId = newActiveId
+  })
+
   const unsub = window.api.onTerminalData((id, data) => {
     const instance = terminalInstances.get(id)
     if (instance) {
@@ -140,25 +166,48 @@ export function setupTerminalDataHandler(): () => void {
     }
 
     const store = useTerminalStore.getState()
-
-    // Skip notifications for terminals still showing startup output
     if (store.recentlyReconnected.has(id)) return
-    // Mark as unread if not the active terminal
-    store.markUnread(id)
+    if (store.activeTerminalId === id) return // Skip all indicators for active terminal
+    if (recentlyDeactivated.has(id)) return // Skip indicators right after switching away
 
-    // Only mark typing for background terminals — active terminal data
-    // includes user keystroke echo which would cause false positives
-    if (store.activeTerminalId !== id) {
+    const meaningful = meaningfulLength(data)
+    if (meaningful === 0) return // Pure ANSI/control — skip
+
+    // Accumulate meaningful bytes in a debounce window
+    const pending = pendingData.get(id)
+    const accumulated = (pending?.bytes ?? 0) + meaningful
+
+    if (pending?.timer) clearTimeout(pending.timer)
+
+    const THRESHOLD = 30 // bytes of meaningful content
+    const DEBOUNCE = 300 // ms
+
+    if (accumulated >= THRESHOLD) {
+      // Enough content — trigger immediately
+      pendingData.delete(id)
+      store.markUnread(id)
       store.markTyping(id)
+
       const existing = typingTimeouts.get(id)
       if (existing) clearTimeout(existing)
       typingTimeouts.set(id, setTimeout(() => {
         useTerminalStore.getState().clearTyping(id)
         typingTimeouts.delete(id)
       }, 1500))
+    } else {
+      // Not enough yet — wait for more
+      pendingData.set(id, {
+        bytes: accumulated,
+        timer: setTimeout(() => {
+          pendingData.delete(id)
+        }, DEBOUNCE)
+      })
     }
   })
-  return unsub
+  return () => {
+    unsub()
+    unsubStore()
+  }
 }
 
 // Cleanup a terminal instance

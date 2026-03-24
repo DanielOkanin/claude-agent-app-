@@ -23,6 +23,7 @@ export class TerminalService {
     workingDirectory: string,
     model: string,
     resume: boolean,
+    sessionId: string,
     onData: (data: string) => void,
     onExit: () => void
   ): void {
@@ -42,8 +43,8 @@ export class TerminalService {
     // When claude exits, the user drops back to a shell
     // Use --session-id for new sessions, --resume for reconnecting
     const claudeCmd = resume
-      ? `claude --resume ${id}${model ? ` --model ${model}` : ''}`
-      : `claude${model ? ` --model ${model}` : ''} --session-id ${id}`
+      ? `claude --resume ${sessionId}${model ? ` --model ${model}` : ''}`
+      : `claude${model ? ` --model ${model}` : ''} --session-id ${sessionId}`
     const ptyProcess = pty.spawn(shell, ['-l', '-c', `${claudeCmd}; exec $SHELL -l`], {
       name: 'xterm-256color',
       cols: 120,
@@ -51,6 +52,9 @@ export class TerminalService {
       cwd: workingDirectory,
       env: cleanEnv
     })
+
+    // NOTE: watchForSessionId disabled — it incorrectly overwrites multiple chats
+    // with the same session ID when they share a working directory
 
     ptyProcess.onData((data) => {
       onData(data)
@@ -131,4 +135,5 @@ export class TerminalService {
       this.destroy(id)
     }
   }
+
 }

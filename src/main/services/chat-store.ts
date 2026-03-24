@@ -28,7 +28,8 @@ export class ChatStore {
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
         working_directory TEXT NOT NULL,
-        model TEXT NOT NULL DEFAULT '${DEFAULT_MODEL}'
+        model TEXT NOT NULL DEFAULT '${DEFAULT_MODEL}',
+        session_id TEXT
       );
     `)
 
@@ -36,6 +37,10 @@ export class ChatStore {
     const columns = this.db.prepare("PRAGMA table_info(terminal_sessions)").all() as { name: string }[]
     if (!columns.some((c) => c.name === 'model')) {
       this.db.exec(`ALTER TABLE terminal_sessions ADD COLUMN model TEXT NOT NULL DEFAULT '${DEFAULT_MODEL}'`)
+    }
+    // Migration: add session_id column if missing
+    if (!columns.some((c) => c.name === 'session_id')) {
+      this.db.exec(`ALTER TABLE terminal_sessions ADD COLUMN session_id TEXT`)
     }
   }
 
@@ -53,7 +58,7 @@ export class ChatStore {
       )
       .run(id, title, now, now, workingDirectory, m)
 
-    return { id, title, createdAt: now, updatedAt: now, workingDirectory, model: m }
+    return { id, title, createdAt: now, updatedAt: now, workingDirectory, model: m, sessionId: id }
   }
 
   listChats(): TerminalSession[] {
@@ -66,6 +71,7 @@ export class ChatStore {
       updated_at: number
       working_directory: string
       model: string
+      session_id: string | null
     }>
 
     return rows.map((row) => ({
@@ -74,7 +80,8 @@ export class ChatStore {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       workingDirectory: row.working_directory,
-      model: row.model || DEFAULT_MODEL
+      model: row.model || DEFAULT_MODEL,
+      sessionId: row.session_id || row.id
     }))
   }
 
@@ -95,7 +102,12 @@ export class ChatStore {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       workingDirectory: row.working_directory,
-      model: row.model || DEFAULT_MODEL
+      model: row.model || DEFAULT_MODEL,
+      sessionId: row.session_id || row.id
     }
+  }
+
+  updateSessionId(id: string, sessionId: string): void {
+    this.db.prepare('UPDATE terminal_sessions SET session_id = ?, updated_at = ? WHERE id = ?').run(sessionId, Date.now(), id)
   }
 }

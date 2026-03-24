@@ -15,6 +15,7 @@ interface TerminalSession {
   updatedAt: number
   workingDirectory: string
   model: string
+  sessionId: string
 }
 
 interface TerminalState {
@@ -43,6 +44,7 @@ interface TerminalState {
   markTyping: (id: string) => void
   clearTyping: (id: string) => void
   updateTitle: (id: string, title: string) => void
+  updateSessionId: (id: string, sessionId: string) => void
   setSelectedModel: (model: string) => void
   updateModel: (id: string, model: string) => void
   setSearchQuery: (query: string) => void
@@ -218,6 +220,12 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       }
       return { terminals: updated }
     })
+  },
+
+  updateSessionId: (id: string, sessionId: string) => {
+    set((state) => ({
+      terminals: state.terminals.map((t) => (t.id === id ? { ...t, sessionId } : t))
+    }))
   },
 
   setSelectedModel: (model: string) => {

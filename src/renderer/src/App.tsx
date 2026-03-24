@@ -45,8 +45,8 @@ function ContextUsage() {
     setUsage(null)
 
     const fetchUsage = () => {
-      window.api.getContextUsage(activeTerminal.id, activeTerminal.workingDirectory).then((data) => {
-        if (!stale && data) setUsage(data)
+      window.api.getContextUsage(activeTerminal.sessionId, activeTerminal.workingDirectory).then((data) => {
+        if (!stale && data) setUsage({ contextUsed: data.contextUsed, model: data.model ?? undefined })
       }).catch(() => {})
     }
 
@@ -262,8 +262,8 @@ function ResizableFilesPanel({ showFiles, onToggleFiles }: { showFiles: boolean;
 
 function App() {
   const {
-    loadTerminals, createTerminal, deleteTerminal, markDisconnected,
-    updateTitle, activeTerminalId, terminals, setShowCommandPalette, switchToIndex
+    loadTerminals, createTerminal, markDisconnected,
+    updateTitle, updateSessionId, activeTerminalId, terminals, setShowCommandPalette, switchToIndex
   } = useTerminalStore()
   const [showFiles, setShowFiles] = useState(false)
 
@@ -278,6 +278,10 @@ function App() {
 
     const unsubTitle = window.api.onTerminalTitleUpdated((id, title) => {
       updateTitle(id, title)
+    })
+
+    const unsubSessionId = window.api.onSessionIdUpdated((id, sessionId) => {
+      updateSessionId(id, sessionId)
     })
 
     const unsubShortcut = window.api.onNewTerminalShortcut(createTerminal)
@@ -297,6 +301,7 @@ function App() {
       unsubData()
       unsubExit()
       unsubTitle()
+      unsubSessionId()
       unsubShortcut()
       unsubPalette()
       unsubSwitch()

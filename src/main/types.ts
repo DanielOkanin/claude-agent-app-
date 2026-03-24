@@ -17,6 +17,7 @@ export interface TerminalSession {
   updatedAt: number
   workingDirectory: string
   model: string
+  sessionId: string
 }
 
 export const AVAILABLE_MODELS = [
@@ -30,7 +31,7 @@ export const DEFAULT_MODEL = 'claude-opus-4-6'
 export interface ContextUsageData {
   contextUsed: number
   outputTokens: number
-  model: string | null
+  model?: string | null
 }
 
 export interface ElectronAPI {
@@ -55,6 +56,7 @@ export interface ElectronAPI {
   onTerminalData: (callback: (id: string, data: string) => void) => () => void
   onTerminalExit: (callback: (id: string) => void) => () => void
   onTerminalTitleUpdated: (callback: (id: string, title: string) => void) => () => void
+  onSessionIdUpdated: (callback: (id: string, sessionId: string) => void) => () => void
   onNewTerminalShortcut: (callback: () => void) => () => void
   onCloseTerminalShortcut: (callback: () => void) => () => void
   onCommandPaletteShortcut: (callback: () => void) => () => void
