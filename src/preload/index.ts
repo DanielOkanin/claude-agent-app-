@@ -8,6 +8,7 @@ const api = {
   renameTerminal: (id: string, title: string) =>
     ipcRenderer.invoke('terminal:rename', id, title),
   reconnectTerminal: (id: string) => ipcRenderer.invoke('terminal:reconnect', id),
+  forkConversation: (sourceId: string) => ipcRenderer.invoke('terminal:fork', sourceId),
   writeTerminal: (id: string, data: string) =>
     ipcRenderer.send('terminal:write', id, data),
   resizeTerminal: (id: string, cols: number, rows: number) =>
@@ -28,6 +29,10 @@ const api = {
   switchDiffFile: (filePath: string) => ipcRenderer.invoke('diff:switch-file', filePath),
   getContextUsage: (sessionId: string, workingDirectory: string) =>
     ipcRenderer.invoke('session:context-usage', sessionId, workingDirectory),
+  readDirectory: (dirPath: string) => ipcRenderer.invoke('fs:read-directory', dirPath),
+  readFileContent: (filePath: string, maxBytes?: number) =>
+    ipcRenderer.invoke('fs:read-file-content', filePath, maxBytes),
+  openFile: (filePath: string) => ipcRenderer.invoke('fs:open-file', filePath),
   selectDirectory: () => ipcRenderer.invoke('dialog:select-directory'),
   onTerminalData: (callback: (id: string, data: string) => void) => {
     const handler = (_event: any, id: string, data: string) => callback(id, data)
@@ -90,6 +95,11 @@ const api = {
     const handler = (_event: any, error: string) => callback(error)
     ipcRenderer.on('voice:error', handler)
     return () => ipcRenderer.removeListener('voice:error', handler)
+  },
+  onToggleExplorerShortcut: (callback: () => void) => {
+    const handler = () => callback()
+    ipcRenderer.on('shortcut:toggle-explorer', handler)
+    return () => ipcRenderer.removeListener('shortcut:toggle-explorer', handler)
   }
 }
 

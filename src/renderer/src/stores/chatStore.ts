@@ -31,11 +31,16 @@ interface TerminalState {
   filesPanelWidth: number
   showCommandPalette: boolean
   showPlanView: boolean
+  activeSidebarView: 'chats' | 'files'
+  expandedDirs: Set<string>
+  previewFilePath: string | null
+  forkingId: string | null
 
   loadTerminals: () => Promise<void>
   setActiveTerminal: (id: string) => void
   createTerminal: () => Promise<void>
   createTerminalInDir: (dir: string) => Promise<void>
+  forkConversation: (sourceId: string) => Promise<void>
   deleteTerminal: (id: string) => Promise<void>
   renameTerminal: (id: string, title: string) => Promise<void>
   markConnected: (id: string) => void
@@ -53,6 +58,9 @@ interface TerminalState {
   setFilesPanelWidth: (width: number) => void
   setShowCommandPalette: (show: boolean) => void
   setShowPlanView: (show: boolean) => void
+  setActiveSidebarView: (view: 'chats' | 'files') => void
+  toggleDirExpanded: (dirPath: string) => void
+  setPreviewFile: (path: string | null) => void
   switchToIndex: (index: number) => void
 }
 
@@ -69,6 +77,10 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
   filesPanelWidth: 288,
   showCommandPalette: false,
   showPlanView: false,
+  activeSidebarView: 'chats',
+  expandedDirs: new Set(),
+  previewFilePath: null,
+  forkingId: null,
 
   loadTerminals: async () => {
     const terminals = await window.api.listTerminals()
@@ -132,6 +144,22 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       connectedTerminals: new Set([...state.connectedTerminals, terminal.id])
     }))
     window.api.setWindowTitle(terminal.title)
+  },
+
+  forkConversation: async (sourceId: string) => {
+    set({ forkingId: sourceId })
+    try {
+      const terminal = await window.api.forkConversation(sourceId)
+      if (!terminal) return
+      set((state) => ({
+        terminals: [terminal, ...state.terminals],
+        activeTerminalId: terminal.id,
+        connectedTerminals: new Set([...state.connectedTerminals, terminal.id])
+      }))
+      window.api.setWindowTitle(terminal.title)
+    } finally {
+      set({ forkingId: null })
+    }
   },
 
   deleteTerminal: async (id: string) => {
@@ -246,7 +274,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
   },
 
   setSidebarWidth: (width: number) => {
-    set({ sidebarWidth: Math.max(200, Math.min(400, width)) })
+    set({ sidebarWidth: Math.max(200, Math.min(480, width)) })
   },
 
   setFilesPanelWidth: (width: number) => {
@@ -259,6 +287,23 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
 
   setShowPlanView: (show: boolean) => {
     set({ showPlanView: show })
+  },
+
+  setActiveSidebarView: (view: 'chats' | 'files') => {
+    set({ activeSidebarView: view })
+  },
+
+  setPreviewFile: (path: string | null) => {
+    set({ previewFilePath: path })
+  },
+
+  toggleDirExpanded: (dirPath: string) => {
+    set((state) => {
+      const expanded = new Set(state.expandedDirs)
+      if (expanded.has(dirPath)) expanded.delete(dirPath)
+      else expanded.add(dirPath)
+      return { expandedDirs: expanded }
+    })
   },
 
   switchToIndex: (index: number) => {

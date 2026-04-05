@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { ipcMain, dialog, BrowserWindow, shell } from 'electron'
 import { execSync, spawn, ChildProcess } from 'child_process'
 import { readFileSync, readdirSync, statSync, openSync, readSync, fstatSync, closeSync } from 'fs'
 import { join, resolve, basename } from 'path'
@@ -6,6 +6,7 @@ import { homedir } from 'os'
 import { is } from '@electron-toolkit/utils'
 import { ChatStore } from './services/chat-store'
 import { TerminalService } from './services/terminal-service'
+import { generateSummary } from './services/conversation-summarizer'
 
 export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   const chatStore = new ChatStore()
@@ -87,6 +88,69 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       }
     )
     return true
+  })
+
+  ipcMain.handle('terminal:fork', async (_event, sourceId: string) => {
+    const source = chatStore.getChat(sourceId)
+    if (!source) return null
+
+    // Step 1: Generate summary FIRST (blocking — renderer shows loading indicator)
+    console.log('[fork] Starting summary generation for session', source.sessionId)
+    const summary = await generateSummary(source.sessionId, source.workingDirectory)
+    console.log('[fork] Summary generated, length:', summary?.length ?? 0)
+
+    if (!summary) {
+      console.log('[fork] Summary generation returned null, aborting fork')
+      return null
+    }
+
+    // Step 2: Create the terminal now that summary is ready
+    const newSession = chatStore.createChat(source.workingDirectory, source.model)
+    const forkTitle = `Fork — ${source.title}`
+    chatStore.updateTitle(newSession.id, forkTitle)
+    newSession.title = forkTitle
+
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('terminal:title-updated', newSession.id, forkTitle)
+    }
+
+    // Step 3: Create terminal and send summary when Claude CLI is ready
+    let readyTimer: ReturnType<typeof setTimeout> | null = null
+    let summarySent = false
+
+    terminalService.createTerminal(
+      newSession.id,
+      source.workingDirectory,
+      newSession.model,
+      false,
+      newSession.sessionId,
+      (data) => {
+        if (!mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('terminal:data', newSession.id, data)
+        }
+        // Quiescence detection: only before summary is sent
+        if (summarySent) return
+        if (readyTimer) clearTimeout(readyTimer)
+        readyTimer = setTimeout(() => {
+          if (summarySent) return
+          summarySent = true
+          console.log('[fork] Terminal ready, sending summary', newSession.id)
+          const message = `Here is a summary of a previous conversation to continue from:\n\n${summary}\n\nPlease review this context and let me know you're ready to continue.`
+          // Bracketed paste mode so Claude CLI treats multi-line text as single input
+          terminalService.write(newSession.id, `\x1b[200~${message}\x1b[201~`)
+          setTimeout(() => {
+            terminalService.write(newSession.id, '\r')
+          }, 100)
+        }, 1500)
+      },
+      () => {
+        if (!mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('terminal:exit', newSession.id)
+        }
+      }
+    )
+
+    return newSession
   })
 
   ipcMain.handle('git:branch', (_event, cwd: string) => {
@@ -389,6 +453,56 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     } catch {
       return null
     }
+  })
+
+  // File explorer: read directory contents
+  ipcMain.handle('fs:read-directory', (_event, dirPath: string) => {
+    try {
+      const entries = readdirSync(dirPath, { withFileTypes: true })
+      const filtered = entries.filter(e =>
+        e.name !== '.git' && e.name !== 'node_modules' && e.name !== '.DS_Store' && !e.name.startsWith('.')
+      )
+      const result = filtered.map(e => ({
+        name: e.name,
+        path: join(dirPath, e.name),
+        isDirectory: e.isDirectory()
+      }))
+      result.sort((a, b) => {
+        if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1
+        return a.name.localeCompare(b.name)
+      })
+      return result
+    } catch {
+      return []
+    }
+  })
+
+  // File explorer: read file content
+  ipcMain.handle('fs:read-file-content', (_event, filePath: string, maxBytes?: number) => {
+    try {
+      const max = maxBytes || 102400
+      const stat = statSync(filePath)
+      const truncated = stat.size > max
+      const fd = openSync(filePath, 'r')
+      const readSize = Math.min(stat.size, max)
+      const buffer = Buffer.alloc(readSize)
+      readSync(fd, buffer, 0, readSize, 0)
+      closeSync(fd)
+      // Check for binary (null bytes in first 8KB)
+      const checkSize = Math.min(readSize, 8192)
+      let isBinary = false
+      for (let i = 0; i < checkSize; i++) {
+        if (buffer[i] === 0) { isBinary = true; break }
+      }
+      return { content: isBinary ? '' : buffer.toString('utf-8'), isBinary, truncated }
+    } catch {
+      return { content: '', isBinary: false, truncated: false }
+    }
+  })
+
+  // Open file in default system editor
+  ipcMain.handle('fs:open-file', (_event, filePath: string) => {
+    return shell.openPath(filePath)
   })
 
   ipcMain.handle('dialog:select-directory', async () => {

@@ -14,6 +14,7 @@ declare global {
       deleteTerminal: (id: string) => Promise<void>
       renameTerminal: (id: string, title: string) => Promise<void>
       reconnectTerminal: (id: string) => Promise<boolean>
+      forkConversation: (sourceId: string) => Promise<TerminalSession | null>
       writeTerminal: (id: string, data: string) => void
       resizeTerminal: (id: string, cols: number, rows: number) => void
       setWindowTitle: (title: string) => void
@@ -26,6 +27,9 @@ declare global {
       getDiffData: () => Promise<{ filePath: string; oldContent: string; newContent: string; cwd: string; allFiles: string[] } | null>
       switchDiffFile: (filePath: string) => Promise<{ filePath: string; oldContent: string; newContent: string; cwd: string; allFiles: string[] } | null>
       getContextUsage: (sessionId: string, workingDirectory: string) => Promise<ContextUsageData | null>
+      readDirectory: (dirPath: string) => Promise<Array<{ name: string; path: string; isDirectory: boolean }>>
+      readFileContent: (filePath: string, maxBytes?: number) => Promise<{ content: string; isBinary: boolean; truncated: boolean }>
+      openFile: (filePath: string) => Promise<string>
       selectDirectory: () => Promise<string | null>
       onTerminalData: (callback: (id: string, data: string) => void) => () => void
       onTerminalExit: (callback: (id: string) => void) => () => void
@@ -44,6 +48,7 @@ declare global {
       onVoicePartial: (callback: (text: string) => void) => () => void
       onVoiceFinal: (callback: (text: string) => void) => () => void
       onVoiceError: (callback: (error: string) => void) => () => void
+      onToggleExplorerShortcut: (callback: () => void) => () => void
     }
     webUtils: {
       getPathForFile: (file: File) => string
