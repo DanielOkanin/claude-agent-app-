@@ -43,7 +43,7 @@ interface TerminalState {
   filesPanelWidth: number
   showCommandPalette: boolean
   showPlanView: boolean
-  activeSidebarView: 'chats' | 'files' | 'remote'
+  activeSidebarView: 'chats' | 'files' | 'remote' | 'collab'
   expandedDirs: Set<string>
   previewFilePath: string | null
   forkingId: string | null
@@ -96,7 +96,7 @@ interface TerminalState {
   setFilesPanelWidth: (width: number) => void
   setShowCommandPalette: (show: boolean) => void
   setShowPlanView: (show: boolean) => void
-  setActiveSidebarView: (view: 'chats' | 'files' | 'remote') => void
+  setActiveSidebarView: (view: 'chats' | 'files' | 'remote' | 'collab') => void
   toggleDirExpanded: (dirPath: string) => void
   setPreviewFile: (path: string | null) => void
   switchToIndex: (index: number) => void
@@ -505,7 +505,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
     set({ showPlanView: show })
   },
 
-  setActiveSidebarView: (view: 'chats' | 'files' | 'remote') => {
+  setActiveSidebarView: (view: 'chats' | 'files' | 'remote' | 'collab') => {
     set({ activeSidebarView: view })
   },
 

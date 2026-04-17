@@ -48,6 +48,30 @@ const api = {
   readFileContent: (filePath: string, maxBytes?: number) =>
     ipcRenderer.invoke('fs:read-file-content', filePath, maxBytes),
   openFile: (filePath: string) => ipcRenderer.invoke('fs:open-file', filePath),
+  // Agent Collaboration
+  collabCreate: (name: string, participantIds: string[]) => ipcRenderer.invoke('collab:create', name, participantIds),
+  collabList: () => ipcRenderer.invoke('collab:list'),
+  collabGet: (sessionId: string) => ipcRenderer.invoke('collab:get', sessionId),
+  collabSend: (sessionId: string, fromTerminalId: string, content: string) => ipcRenderer.invoke('collab:send', sessionId, fromTerminalId, content),
+  collabUpdatePlan: (sessionId: string, plan: string) => ipcRenderer.invoke('collab:update-plan', sessionId, plan),
+  collabApprove: (sessionId: string) => ipcRenderer.invoke('collab:approve', sessionId),
+  collabDelete: (sessionId: string) => ipcRenderer.invoke('collab:delete', sessionId),
+  onCollabMessage: (callback: (sessionId: string, msg: any) => void) => {
+    const handler = (_event: any, sessionId: string, msg: any) => callback(sessionId, msg)
+    ipcRenderer.on('collab:message', handler)
+    return () => ipcRenderer.removeListener('collab:message', handler)
+  },
+  onCollabPlanUpdated: (callback: (sessionId: string, plan: string) => void) => {
+    const handler = (_event: any, sessionId: string, plan: string) => callback(sessionId, plan)
+    ipcRenderer.on('collab:plan-updated', handler)
+    return () => ipcRenderer.removeListener('collab:plan-updated', handler)
+  },
+  onCollabApproved: (callback: (sessionId: string) => void) => {
+    const handler = (_event: any, sessionId: string) => callback(sessionId)
+    ipcRenderer.on('collab:approved', handler)
+    return () => ipcRenderer.removeListener('collab:approved', handler)
+  },
+
   // Projects
   pinProject: (directory: string, name?: string) => ipcRenderer.invoke('projects:pin', directory, name),
   unpinProject: (id: string) => ipcRenderer.invoke('projects:unpin', id),

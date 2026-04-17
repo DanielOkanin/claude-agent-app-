@@ -4,6 +4,7 @@ import { formatRelativeTime } from '../utils/time'
 import { FileExplorer } from './FileExplorer'
 import { WebRemotePanel } from './WebRemotePanel'
 import { QuickProjectPicker } from './QuickProjectPicker'
+import { AgentCollabPanel } from './AgentCollabPanel'
 
 function getModelShortName(modelId: string): string {
   const provider = inferProvider(modelId)
@@ -659,6 +660,8 @@ export function Sidebar() {
 
         {activeSidebarView === 'remote' ? (
           <WebRemotePanel />
+        ) : activeSidebarView === 'collab' ? (
+          <AgentCollabPanel />
         ) : activeSidebarView === 'files' ? (
           <FileExplorer />
         ) : (

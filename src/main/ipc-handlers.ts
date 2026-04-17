@@ -12,10 +12,13 @@ import { getProvider } from './providers'
 import type { AgentProviderId } from './providers/types'
 import type { TerminalListener, AppServices } from './services/web-remote-server'
 
+import { AgentCollabService } from './services/agent-collab'
+
 export function registerIpcHandlers(mainWindow: BrowserWindow): AppServices {
   const chatStore = new ChatStore()
   const terminalService = new TerminalService()
   const worktreeService = new WorktreeService()
+  const collabService = new AgentCollabService()
 
   // --- Terminal event broadcasting ---
   const terminalListeners: TerminalListener[] = []
@@ -504,6 +507,68 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): AppServices {
   })
 
   ipcMain.handle('fs:open-file', (_event, filePath: string) => shell.openPath(filePath))
+
+  // --- Agent Collaboration ---
+
+  ipcMain.handle('collab:create', (_event, name: string, participantIds: string[]) => {
+    const session = collabService.createSession(name, participantIds)
+    return session
+  })
+
+  ipcMain.handle('collab:list', () => {
+    return collabService.listSessions()
+  })
+
+  ipcMain.handle('collab:get', (_event, sessionId: string) => {
+    return collabService.getSession(sessionId)
+  })
+
+  ipcMain.handle('collab:send', (_event, sessionId: string, fromTerminalId: string, content: string) => {
+    const terminal = chatStore.getChat(fromTerminalId)
+    if (!terminal) return null
+    const providerConfig = getProvider(terminal.provider)
+    const fromLabel = `${providerConfig.displayName} (${terminal.title})`
+
+    const msg = collabService.sendMessage(sessionId, fromTerminalId, fromLabel, content)
+    if (!msg) return null
+
+    // Relay to other participants by injecting into their terminals
+    const session = collabService.getSession(sessionId)
+    if (session) {
+      for (const participantId of session.participants) {
+        if (participantId === fromTerminalId) continue
+        const relayText = collabService.buildRelayPrompt(msg, session.plan)
+        // Paste into the other agent's terminal using bracketed paste
+        terminalService.write(participantId, `\x1b[200~${relayText}\x1b[201~`)
+        setTimeout(() => terminalService.write(participantId, '\r'), 200)
+      }
+    }
+
+    // Broadcast to renderer
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('collab:message', sessionId, msg)
+    }
+
+    return msg
+  })
+
+  ipcMain.handle('collab:update-plan', (_event, sessionId: string, plan: string) => {
+    collabService.updatePlan(sessionId, plan)
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('collab:plan-updated', sessionId, plan)
+    }
+  })
+
+  ipcMain.handle('collab:approve', (_event, sessionId: string) => {
+    collabService.approvePlan(sessionId)
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('collab:approved', sessionId)
+    }
+  })
+
+  ipcMain.handle('collab:delete', (_event, sessionId: string) => {
+    collabService.deleteSession(sessionId)
+  })
 
   // --- Pinned/Recent Projects ---
 
