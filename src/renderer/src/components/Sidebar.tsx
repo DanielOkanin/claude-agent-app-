@@ -670,12 +670,12 @@ export function Sidebar() {
             <div className="px-3 pb-5 border-b border-slate-700/30">
               {/* App title */}
               <div className="flex items-center gap-2 mb-5 pl-0.5">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-400 to-amber-600 flex items-center justify-center shadow-sm">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-sm">
                   <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3" />
                   </svg>
                 </div>
-                <h1 className="text-base font-semibold text-white tracking-tight">Claude</h1>
+                <h1 className="text-base font-semibold text-white tracking-tight">Cely</h1>
               </div>
 
               {/* Search */}

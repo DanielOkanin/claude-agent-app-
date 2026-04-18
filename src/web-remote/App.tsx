@@ -97,7 +97,7 @@ function ConversationHistory({ sessionId }: { sessionId: string }) {
         </div>
       ))}
       <div className="text-center text-[10px] text-slate-600 py-2">
-        Terminal output will appear below when Claude responds
+        Terminal output will appear below when the agent responds
       </div>
     </div>
   )
@@ -521,7 +521,7 @@ function InputBar({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="border-t border-slate-700/50 bg-slate-900 p-3 pb-[env(safe-area-inset-bottom,12px)]">
-      {/* Claude Code action buttons */}
+      {/* Agent action buttons */}
       <div className="flex items-center gap-1.5 mb-2 overflow-x-auto no-scrollbar">
         {/* Edit prompt actions */}
         <button

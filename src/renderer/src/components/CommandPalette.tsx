@@ -21,7 +21,7 @@ export function CommandPalette() {
       {
         id: 'new-chat',
         label: 'New Chat',
-        description: 'Open a new Claude chat (Cmd+N)',
+        description: 'Open a new chat (Cmd+N)',
         icon: 'chat',
         action: () => { setShowCommandPalette(false); createTerminal() }
       }
