@@ -73,13 +73,6 @@ export function AgentCollabPanel() {
     setSessionName('')
   }, [selectedAgents, sessionName])
 
-  const sendToPlan = useCallback(async (fromId: string, content: string) => {
-    if (!activeSession) return
-    await window.api.collabSend(activeSession.id, fromId, content)
-    // Refresh
-    const updated = await window.api.collabGet(activeSession.id)
-    if (updated) setActiveSession(updated)
-  }, [activeSession])
 
   const startPlanning = useCallback(async () => {
     if (!activeSession || !planDraft.trim()) return

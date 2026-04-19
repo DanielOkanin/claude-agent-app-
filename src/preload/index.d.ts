@@ -68,6 +68,29 @@ declare global {
       onVoiceError: (callback: (error: string) => void) => () => void
       onToggleExplorerShortcut: (callback: () => void) => () => void
 
+      // Agent Collaboration
+      collabCreate: (name: string, participantIds: string[]) => Promise<any>
+      collabList: () => Promise<any[]>
+      collabGet: (sessionId: string) => Promise<any>
+      collabSend: (sessionId: string, fromTerminalId: string, content: string) => Promise<void>
+      collabUpdatePlan: (sessionId: string, plan: string) => Promise<void>
+      collabApprove: (sessionId: string) => Promise<void>
+      collabDelete: (sessionId: string) => Promise<void>
+      onCollabMessage: (callback: (sessionId: string, msg: any) => void) => () => void
+      onCollabPlanUpdated: (callback: (sessionId: string, plan: string) => void) => () => void
+      onCollabApproved: (callback: (sessionId: string) => void) => () => void
+      // Orchestrator v2
+      collabV2Create: (name: string, agentIds: string[], maxRounds?: number) => Promise<any>
+      collabV2Start: (sessionId: string, prompt: string) => Promise<void>
+      collabV2Intervene: (sessionId: string, message: string) => Promise<void>
+      collabV2Approve: (sessionId: string) => Promise<void>
+      collabV2Get: (sessionId: string) => Promise<any>
+      collabV2List: () => Promise<any[]>
+      collabV2Delete: (sessionId: string) => Promise<void>
+      onOrchestratorTurn: (callback: (sessionId: string, turn: any) => void) => () => void
+      onOrchestratorMaxRounds: (callback: (sessionId: string) => void) => () => void
+      onOrchestratorApproved: (callback: (sessionId: string) => void) => () => void
+
       // Web Remote
       webRemoteStart: (port?: number) => Promise<{ port: number; token: string; url: string; qrDataUrl: string }>
       webRemoteStop: () => Promise<void>

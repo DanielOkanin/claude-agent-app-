@@ -489,19 +489,6 @@ export function Sidebar() {
     })
   }
 
-  // Keep old references for dialogs
-  const { featureGroups, ungrouped } = useMemo(() => {
-    const featureGroups: Array<{ feature: typeof features[0]; sessions: typeof filtered }> = []
-    const ungrouped: typeof filtered = []
-    for (const feature of features) {
-      const sessions = filtered.filter((t) => t.featureId === feature.id)
-      featureGroups.push({ feature, sessions })
-    }
-    for (const t of filtered) {
-      if (!t.featureId) ungrouped.push(t)
-    }
-    return { featureGroups, ungrouped }
-  }, [filtered, features])
 
   const deleteTarget = confirmDeleteId ? terminals.find((t) => t.id === confirmDeleteId) : null
   const closeFeatureTarget = confirmCloseFeatureId ? features.find((f) => f.id === confirmCloseFeatureId) : null
@@ -795,10 +782,12 @@ export function Sidebar() {
 
               {/* Quick Project Picker */}
               {showProjectPicker && (
-                <QuickProjectPicker
-                  onSelect={(dir) => createTerminalInDirQuick(dir)}
-                  onCancel={() => setShowProjectPicker(false)}
-                />
+                <div className="relative">
+                  <QuickProjectPicker
+                    onSelect={(dir) => createTerminalInDirQuick(dir)}
+                    onCancel={() => setShowProjectPicker(false)}
+                  />
+                </div>
               )}
             </div>
 
