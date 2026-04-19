@@ -28,12 +28,12 @@ export const PROVIDERS: RendererProvider[] = [
     displayName: 'Claude',
     color: { text: 'text-orange-400', bg: 'bg-orange-400/10', border: 'border-orange-400/30', accent: 'orange' },
     models: [
-      { id: 'claude-sonnet-4-7', label: 'Sonnet 4.7', description: 'Latest & fastest', contextWindow: 1_000_000 },
+      { id: 'claude-opus-4-7', label: 'Opus 4.7', description: 'Most capable', contextWindow: 1_000_000 },
       { id: 'claude-sonnet-4-6', label: 'Sonnet 4.6', description: 'Fast & capable', contextWindow: 1_000_000 },
       { id: 'claude-opus-4-6', label: 'Opus 4.6', description: 'Most intelligent', contextWindow: 1_000_000 },
       { id: 'claude-haiku-4-5', label: 'Haiku 4.5', description: 'Fastest', contextWindow: 200_000 }
     ],
-    defaultModel: 'claude-sonnet-4-7',
+    defaultModel: 'claude-opus-4-7',
     capabilities: { sessionResume: true, modelSwitchInSession: true, contextUsage: true, plans: true, sessionFork: true }
   },
   {
