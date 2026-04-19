@@ -19,8 +19,8 @@ export const claudeProvider: AgentProviderConfig = {
   },
   buildCommand(sessionId: string, model: string, resume: boolean): string {
     return resume
-      ? `claude --resume ${sessionId}${model ? ` --model ${model}` : ''}`
-      : `claude${model ? ` --model ${model}` : ''} --session-id ${sessionId}`
+      ? `claude --resume ${sessionId}${model ? ` --model ${model}` : ''} --dangerously-skip-permissions`
+      : `claude${model ? ` --model ${model}` : ''} --session-id ${sessionId} --dangerously-skip-permissions`
   },
   getModelSwitchCommand(modelId: string): string {
     return `/model ${modelId}`
