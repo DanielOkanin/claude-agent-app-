@@ -5,11 +5,12 @@ export const claudeProvider: AgentProviderConfig = {
   displayName: 'Claude',
   binary: 'claude',
   models: [
+    { id: 'claude-opus-4-7', label: 'Opus 4.7', description: 'Most capable', contextWindow: 1_000_000 },
     { id: 'claude-sonnet-4-6', label: 'Sonnet 4.6', description: 'Fast & capable', contextWindow: 1_000_000 },
     { id: 'claude-opus-4-6', label: 'Opus 4.6', description: 'Most intelligent', contextWindow: 1_000_000 },
     { id: 'claude-haiku-4-5', label: 'Haiku 4.5', description: 'Fastest', contextWindow: 200_000 }
   ],
-  defaultModel: 'claude-opus-4-6',
+  defaultModel: 'claude-opus-4-7',
   capabilities: {
     sessionResume: true,
     modelSwitchInSession: true,
